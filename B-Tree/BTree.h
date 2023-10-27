@@ -8,8 +8,16 @@ struct BTreeNode{
     int n; // number of keys in the node
     BTreeNode **C; // array of pointers to the children of the node
     bool isLeaf; // true if the node is a leaf
+    int t; //minimum number of keys in node
     //methods
-    bool searchkey(int);
+    bool searchKey(int);
+    int findKeyIndex(int);
+    void deleteKey(int);
+    void deleteKeyFromLeaf(int);
+    void deleteKeyFromNonLeaf(int);
+    int getPredecessor(int);
+    int getSuccessor(int);
+    void mergeChildren (int);
 };///////////////////////////////////////////////
 
 

@@ -2,7 +2,7 @@
 #include <iostream>
 using namespace std;
 // Node methods
-bool BTreeNode::searchkey(int _key){
+bool BTreeNode::searchKey(int _key){
         int i = 0;
         while(i < n && _key > keys[i]){
             i++;
@@ -11,12 +11,106 @@ bool BTreeNode::searchkey(int _key){
             return true;
         if(isLeaf)
             return false;
-        return C[i]->searchkey(_key);
+        return C[i]->searchKey(_key);
     }
 
+int BTreeNode::findKeyIndex(int _key) {
+    int idx = 0;
+    while (idx < n && _key > keys[idx]) {
+        idx++;
+    }
+    return idx;
+}
 
+void BTreeNode::deleteKey(int _key) {
+    int idx = findKeyIndex(_key);
 
+    if (idx < n && keys[idx] == _key) {
+        if (isLeaf) {
+            deleteKeyFromLeaf(idx);
+        } else {
+            deleteKeyFromNonLeaf(idx);
+        }
+    } else {
+        if (isLeaf) {
+            cout << "Key " << _key << " does not exist in the tree." << endl;
+        } else {
+            cout << "Key " << _key << " does not exist in the tree. Please check the input." << endl;
+        }
+    }
+}
 
+void BTreeNode::deleteKeyFromLeaf(int idx) {
+    for (int i = idx + 1; i < n; i++) {
+        keys[i - 1] = keys[i];
+    }
+    n--;
+}
+
+void BTreeNode::deleteKeyFromNonLeaf(int idx) {
+    int key = keys[idx];
+
+    if (C[idx]->n >= t) {
+        int predecessor = getPredecessor(idx);
+        keys[idx] = predecessor;
+        C[idx]->deleteKey(predecessor);
+    } else if (C[idx + 1]->n >= t) {
+        int successor = getSuccessor(idx);
+        keys[idx] = successor;
+        C[idx + 1]->deleteKey(successor);
+    } else {
+        mergeChildren(idx);
+        C[idx]->deleteKey(key);
+    }
+}
+
+int BTreeNode::getPredecessor(int idx) {
+    BTreeNode* currentNode = C[idx];
+    currentNode->t = t;
+    while (!currentNode->isLeaf) {
+        currentNode = currentNode->C[currentNode->n];
+    }
+    return currentNode->keys[currentNode->n - 1];
+}
+
+int BTreeNode::getSuccessor(int idx) {
+    BTreeNode* currentNode = C[idx + 1];
+    currentNode-> t = t;
+    while (!currentNode->isLeaf) {
+        currentNode = currentNode->C[0];
+    }
+    return currentNode->keys[0];
+}
+
+void BTreeNode::mergeChildren(int idx) {
+    BTreeNode* child = C[idx];
+    BTreeNode* sibling = C[idx + 1];
+    sibling-> t = t;
+    child->t = t;
+    child->keys[t - 1] = keys[idx];
+
+    for (int i = 0; i < sibling->n; i++) {
+        child->keys[i + t] = sibling->keys[i];
+    }
+
+    if (!child->isLeaf) {
+        for (int i = 0; i <= sibling->n; i++) {
+            child->C[i + t] = sibling->C[i];
+        }
+    }
+
+    for (int i = idx + 1; i < n; i++) {
+        keys[i - 1] = keys[i];
+    }
+
+    for (int i = idx + 2; i <= n; i++) {
+        C[i - 1] = C[i];
+    }
+
+    child->n += sibling->n + 1;
+    n--;
+    delete sibling;
+}
 
 //!-----------------------------------------------------------
 // Constructor
@@ -30,7 +124,7 @@ void BTree::search(int _key){
         cout << "The tree is empty" << endl;
         return;
     }
-    if(root->searchkey(_key))
+    if(root->searchKey(_key))
         cout << "The key "<<_key<<" is found in the tree" << endl;
     else
         cout << "The key "<<_key<<" is NOT found in the tree" << endl;
@@ -43,6 +137,7 @@ void BTree::splitChild(BTreeNode* _parent, int _index, BTreeNode* _child){
     newNode->C = new BTreeNode *[2*t];
     newNode->isLeaf = _child->isLeaf;
     newNode->n = t - 1;
+    newNode->t = t;
 
     for (int j = 0; j < t - 1; j++)
         newNode->keys[j] = _child->keys[j + t];
@@ -100,6 +195,7 @@ void BTree::insert(int _key){
         root->C = new BTreeNode *[2*t];
         root->isLeaf = true;
         root->n = 0;
+        root->t = t;
     }
     
     if(root->n == 2*t-1){ // Node is full
@@ -109,6 +205,7 @@ void BTree::insert(int _key){
         newRoot->isLeaf = false;
         newRoot->n = 0;
         newRoot->C[0] = root;
+        newRoot->t = t;
         splitChild(newRoot, 0, root);
         
         root = newRoot;
@@ -117,8 +214,22 @@ void BTree::insert(int _key){
 }
 
 void BTree::remove(int _key){
-    //TODO : implement the remove method
-    cout <<"NOT IMPLEMENETED YET"<<endl;
+    if (root == nullptr) {
+        cout << "The tree is empty" << endl;
+        return;
+    }
+
+    root->deleteKey(_key);
+
+    if (root->n == 0) {
+        BTreeNode* temp = root;
+        if (root->isLeaf) {
+            root = nullptr;
+        } else {
+            root = root->C[0];
+        }
+        delete temp;
+    }
 }
 
 void BTree::printTree(){
